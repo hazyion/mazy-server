@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import type {Request, Response} from 'express';
 import dotenv from 'dotenv';
 import {model, fileManager} from '../model';
@@ -23,25 +24,29 @@ export async function postContent(req: Request, res: Response){
 }
 
 export async function postImage(req: Request, res: Response){
-  let files = req.files;
-  // console.log(req.headers['content-type']);
-  const filename = 'img1.png';
-  const uploadRes = await fileManager.uploadFile(`../uploads/${filename}`, {
-    mimeType: (files as any)[0].mimetype,
+  if(!req.files){
+    res.status(400).send("Invalid file prolly");
+    throw new Error("No file found");
+  }
+  let file = (req.files as any)[0];
+  console.log(file);
+
+  const uploadRes = await fileManager.uploadFile(path.resolve(`uploads/${file.filename}`), {
+    mimeType: file.mimetype,
     displayName: "sample image"
   });
 
   const getResult = await fileManager.getFile(uploadRes.file.name);
 
-  // const result = await model.generateContent([
-  //   {
-  //     fileData: {
-  //       mimeType: getResult.file.mimeType,
-  //       fileUri: getResult.file.uri
-  //     }
-  //   },
-  //   { text: "Describe the image with a creative description." },
-  // ]);
+  const result = await model.generateContent([
+    {
+      fileData: {
+        mimeType: getResult.mimeType,
+        fileUri: getResult.uri
+      }
+    },
+    { text: "Describe the image with a creative description." },
+  ]);
 
-  res.status(200).send(getResult);
+  res.status(200).send(result);
 }
